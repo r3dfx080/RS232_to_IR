@@ -84,30 +84,20 @@ ISR(USART_RX_vect) {
 	cmd = UDR0;
 	for (uint8_t i = 0; i < sizeof(commandMap) / sizeof(commandMap[0]); i++) {
 		if (commandMap[i].command == cmd) {
-			sendPanasonic(ADDRESS, commandMap[i].irCode);
+			if (cmd == EJECT_COMMAND){
+				// activating eject by "holding down" STOP button for ~3s
+				for (uint8_t j = 0; j < 20; j++){
+					sendPanasonic(ADDRESS, STOP_CODE);
+					_delay_ms(100);
+				}
+			}
+			else
+			{
+				sendPanasonic(ADDRESS, commandMap[i].irCode);
+			}
 			break;
 		}
 	}
-// 	switch(UDR0){
-// 		case PLAY_COMMAND:
-// 			sendPanasonic(ADDRESS, PLAY_CODE);
-// 			break;
-// 		case STOP_COMMAND:
-// 			sendPanasonic(ADDRESS, STOP_CODE);
-// 			break;
-// 		case FF_COMMAND:
-// 			sendPanasonic(ADDRESS, FF_CODE);
-// 			break;
-// 		case REW_COMMAND:
-// 			sendPanasonic(ADDRESS, REW_CODE);
-// 			break;
-// 		case PAUSE_COMMAND:
-// 			sendPanasonic(ADDRESS, PAUSE_CODE);
-// 			break;
-// 		case EJECT_COMMAND:
-// 			sendPanasonic(ADDRESS, STOP_CODE);
-// 			break;
-// 	}
 }
 
 int main(void)
