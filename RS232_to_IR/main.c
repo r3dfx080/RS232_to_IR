@@ -39,7 +39,8 @@
 
 // IR codes for VEQ1656
 #define PLAY_CODE		0x09005059
-#define STOP_CODE		0x09000009	// eject is possible by holding down STOP button on a remote
+#define STOP_CODE		0x09000009
+#define EJECT_CODE		0x09008089	// discrete eject on some Panasonic VCRs
 #define FF_CODE			0x0900C0C9
 #define REW_CODE		0x09004049
 
@@ -67,7 +68,7 @@ const CommandMap commandMap[] = {
 	{ FF_COMMAND,              FF_CODE },
 	{ REW_COMMAND,             REW_CODE },
 	{ PAUSE_COMMAND,           PAUSE_CODE },
-	{ EJECT_COMMAND,           STOP_CODE },  // same IR as STOP
+	{ EJECT_COMMAND,           EJECT_CODE },
 	{ REC_COMMAND,             REC_CODE },
 	{ SLOW_COMMAND,            SLOW_CODE },
 	{ MENU_COMMAND,            MENU_CODE },
@@ -79,20 +80,38 @@ const CommandMap commandMap[] = {
 };
 
 uint8_t cmd;
+static void sendEjectSequence(void)
+{
+	// Some decks react only to discrete EJECT.
+	for (uint8_t j = 0; j < 3; j++) {
+		sendPanasonic(ADDRESS, EJECT_CODE);
+		_delay_ms(35);
+	}
+
+	_delay_ms(80);
+
+	// Fallback: emulate holding STOP for ~3.3 s with Panasonic-like repeat period.
+	for (uint8_t j = 0; j < 26; j++) {
+		sendPanasonic(ADDRESS, STOP_CODE);
+		_delay_ms(58);
+	}
+}
 
 ISR(USART_RX_vect) {
 	cmd = UDR0;
 	for (uint8_t i = 0; i < sizeof(commandMap) / sizeof(commandMap[0]); i++) {
 		if (commandMap[i].command == cmd) {
 			if (cmd == EJECT_COMMAND){
-				// activating eject by "holding down" STOP button for ~3s
-				for (uint8_t j = 0; j < 20; j++){
-					sendPanasonic(ADDRESS, STOP_CODE);
-					_delay_ms(100);
-				}
+				sendEjectSequence();
 			}
 			else
 			{
+// 				if (cmd == PLAY_COMMAND)
+// 				{
+// 					PORTB |= (1 << PORTB5);
+// 					_delay_ms(300);
+// 					PORTB &= ~(1 << PORTB5);
+// 				}
 				sendPanasonic(ADDRESS, commandMap[i].irCode);
 			}
 			break;
